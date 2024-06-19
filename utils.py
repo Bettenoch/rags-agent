@@ -7,6 +7,9 @@ from llama_index.core import SummaryIndex, VectorStoreIndex
 from llama_index.core.tools import QueryEngineTool
 from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.core.selectors import LLMSingleSelector
+from llama_index.core.vector_stores import MetadataFilters, FilterCondition
+from llama_index.core.tools import FunctionTool
+from typing import List
 
 
 
@@ -30,27 +33,62 @@ def get_router_query_engine(file_path: str, llm = None, embed_model = None):
         use_async=True,
         llm=llm
     )
-    vector_query_engine = vector_index.as_query_engine(llm=llm)
+    # vector_query_engine = vector_index.as_query_engine(
+    #     similarity_top_k=2,
+    #     filters=MetadataFilters.from_dicts(
+    #         [{"key": "page_label", "value": "2"}]
+    #         ),
+    # )
+    def vector_query_engine(
+        query: str,
+        page_numbers: List[int]
+    ) -> str:
+        """ Perform a vector search over an index.
+        query (str): the string query to be embedded.
+        page_numbers (List[int]): Filter by set of pages. Leave blank id we want to perform a vector  search 
+        over all pages. otherwise, filter by the set of specified pages
+        
+        """
+        
+        metadata_dicts = [
+            {"key": "page_label", "value": p} for p in page_numbers
+        ]
+        query_engine = vector_index.as_query_engine(
+            similarity_top_k=2,
+            filters=MetadataFilters.from_dicts(
+                metadata_dicts,
+                condition=FilterCondition.OR
+            ),
+        )
+        response = query_engine.query(query)
+        return response
+    
+    vector_query_tool = FunctionTool.from_defaults(
+        name="vector_query_tool",
+        fn=vector_query_engine
+    )
 
     summary_tool = QueryEngineTool.from_defaults(
+        name="summary_tool",
         query_engine=summary_query_engine,
         description=(
             "Useful for summarization questions related to MetaGPT"
         ),
     )
 
-    vector_tool = QueryEngineTool.from_defaults(
-        query_engine=vector_query_engine,
-        description=(
-            "Useful for retrieving specific context from the MetaGPT paper."
-        ),
-    )
+    # vector_tool = QueryEngineTool.from_defaults(
+    #     query_engine=vector_query_engine,
+    #     description=(
+    #         "Useful for retrieving specific context from the MetaGPT paper."
+    #     ),
+    # )
+  
 
     query_engine = RouterQueryEngine(
         selector=LLMSingleSelector.from_defaults(),
         query_engine_tools=[
             summary_tool,
-            vector_tool,
+            vector_query_tool,
         ],
         verbose=True
     )
