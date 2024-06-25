@@ -31,14 +31,8 @@ def get_router_query_engine(file_path: str, llm = None, embed_model = None):
     summary_query_engine = summary_index.as_query_engine(
         response_mode="tree_summarize",
         use_async=True,
-        llm=llm
     )
-    # vector_query_engine = vector_index.as_query_engine(
-    #     similarity_top_k=2,
-    #     filters=MetadataFilters.from_dicts(
-    #         [{"key": "page_label", "value": "2"}]
-    #         ),
-    # )
+    
     def vector_query_engine(
         query: str,
         page_numbers: List[int]
@@ -76,20 +70,14 @@ def get_router_query_engine(file_path: str, llm = None, embed_model = None):
         ),
     )
 
-    # vector_tool = QueryEngineTool.from_defaults(
-    #     query_engine=vector_query_engine,
-    #     description=(
-    #         "Useful for retrieving specific context from the MetaGPT paper."
-    #     ),
-    # )
-  
-
-    query_engine = RouterQueryEngine(
-        selector=LLMSingleSelector.from_defaults(),
-        query_engine_tools=[
-            summary_tool,
-            vector_query_tool,
-        ],
+    llm = OpenAI(model="gpt-3.5-turbo", temperature=0)
+    
+    response = llm.predict_and_call(
+        [vector_query_tool, summary_tool],
+        input="what are Subspace similarity between different random seeds as described in page 11?",
+        stop=["\n\n"],
         verbose=True
     )
-    return query_engine
+
+    return response
+
