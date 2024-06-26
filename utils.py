@@ -1,22 +1,27 @@
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
-from llama_index.core import Settings
+import nest_asyncio
+from helper import get_openai_api_key
+# from llama_index.core import Settings
 from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.core import SummaryIndex, VectorStoreIndex
 from llama_index.core.tools import QueryEngineTool
-from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
-from llama_index.core.selectors import LLMSingleSelector
+# from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
+# from llama_index.core.selectors import LLMSingleSelector
 from llama_index.core.vector_stores import MetadataFilters, FilterCondition
 from llama_index.core.tools import FunctionTool
 from typing import List
+nest_asyncio.apply()
+
+OPENAI_API_KEY = get_openai_api_key()
 
 
 
-
-def get_router_query_engine(file_path: str, llm = None, embed_model = None):
+async def get_router_query_engine(file_path: str, query: str,  pages: List[str] = None, llm = None, embed_model = None):
     """Get router query engine."""
     llm = llm or OpenAI(model="gpt-3.5-turbo")
+    pages = pages or []
     embed_model = embed_model or OpenAIEmbedding(model="text-embedding-ada-002")
 
     # load documents
@@ -70,12 +75,10 @@ def get_router_query_engine(file_path: str, llm = None, embed_model = None):
         ),
     )
 
-    llm = OpenAI(model="gpt-3.5-turbo", temperature=0)
     
     response = llm.predict_and_call(
         [vector_query_tool, summary_tool],
-        input="what are Subspace similarity between different random seeds as described in page 11?",
-        stop=["\n\n"],
+        query,
         verbose=True
     )
 
