@@ -12,7 +12,7 @@ nest_asyncio.apply()
 
 OPENAI_API_KEY = get_openai_api_key()
 
-def get_router_query_engine(file_path: str, query: str, pages: List[str] = None) -> str:
+async def get_router_query_engine(file_path: str, query: str, pages: List[str] = None) -> str:
     pages = pages or []
     llm = OpenAI(model="gpt-3.5-turbo", temperature=0, api_key=OPENAI_API_KEY)
 
@@ -63,7 +63,7 @@ def get_router_query_engine(file_path: str, query: str, pages: List[str] = None)
     )
 
     # Perform query
-    response = llm.predict_and_call(
+    response = await llm.predict_and_call(
         [vector_query_tool, summary_tool], 
         query, 
         verbose=True
